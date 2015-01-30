@@ -80,19 +80,19 @@ my $verbose = $ng->get('verbose');
 my @paths = grep { -x "$_/gearadmin" } split /:/, $ENV{PATH};
 my $cmd = "gearadmin --status -h $host -p $port";
 if (@paths == 0) {
-	print STDERR "gearadmin not found, using nc\n" if ($verbose != 0);
-	$cmd = "echo status | nc -w 1 $host $port";
+    print STDERR "gearadmin not found, using nc\n" if ($verbose != 0);
+    $cmd = "echo status | nc -w 1 $host $port";
 }
 
-foreach (`$cmd 2>/dev/null | grep -v '^\\.'`) {
-	chomp;
+foreach (`$cmd | grep -v '^\\.'`) {
+    chomp;
 
-	my ($fname, $job_total, $job_running, $worker_count) =
-	  split /[[:space:]]+/;
+    my ($fname, $job_total, $job_running, $worker_count) =
+      split /[[:space:]]+/;
 
-	$runtime->{'funcs'}{"$fname"} = {job_total => $job_total,
-	                                 job_running => $job_running,
-	                                 worker_count => $worker_count };
+    $runtime->{'funcs'}{"$fname"} = {job_total => $job_total,
+                                     job_running => $job_running,
+                                     worker_count => $worker_count };
 }
 
 # get threshold separator
@@ -105,59 +105,79 @@ my $flist = $ng->get('flist');
 
 # * means: check all the registered functions
 if (!defined $flist || $flist =~ /^\*/) {
-	my $threshold;
-	if (defined $flist && $flist =~ /^\*$threshold_separator(\d+)$/) {
-		$threshold = $1;
-	}
-	@flist = map { defined $threshold ? "$_$threshold_separator$threshold" : $_ }
-		keys %{ $runtime->{'funcs'} };
+    my $threshold;
+    if (defined $flist && $flist =~ /^\*$threshold_separator(\d+)$/) {
+        $threshold = $1;
+    }
+    @flist = map { defined $threshold ? "$_$threshold_separator$threshold" : $_ }
+        keys %{ $runtime->{'funcs'} };
 } else {
-	@flist = split /,/, $flist;
+    @flist = split /,/, $flist;
 }
 
 foreach (@flist) {
 
-	my ($fname, $fthreshold);
+    my ($fname, $fthreshold);
 
-	if (/$threshold_separator/) {
-		($fname, $fthreshold) = split /$threshold_separator/;
-	} else {
-		($fname, $fthreshold) = ($_, -1);
-	}
+    if (/$threshold_separator/) {
+        ($fname, $fthreshold) = split /$threshold_separator/;
+    } else {
+        ($fname, $fthreshold) = ($_, -1);
+    }
 
-	if (!defined($runtime->{'funcs'}{"$fname"}) &&
-	    $runtime->{'status'} <= CRITICAL) {
+    if (!defined($runtime->{'funcs'}{"$fname"}) &&
+        $runtime->{'status'} <= CRITICAL) {
 
-		($runtime->{'status'}, $runtime->{'message'}) =
-		  (CRITICAL, "function '$fname' is not registered in the server");
-	} else {
-		if ($runtime->{'funcs'}{"$fname"}{'worker_count'} <
-		    $ng->get('critworkers') && $runtime->{'status'} <= CRITICAL) {
+        ($runtime->{'status'}, $runtime->{'message'}) =
+          (CRITICAL, "function '$fname' is not registered in the server");
 
-			($runtime->{'status'}, $runtime->{'message'}) =
-			  (CRITICAL,
-			   "less than " .$ng->get('critworkers').
-			   " workers were found having function '$fname' registered.");
-		}
+    } else {
 
-		if ($runtime->{'funcs'}{"$fname"}{'worker_count'} <
-		    $ng->get('warnworkers') && $runtime->{'status'} <= WARNING) {
+        $runtime->{'message'} = "Everything OK | "
+            .$fname. "_wc=" .$runtime->{'funcs'}{"$fname"}{'worker_count'}. ", "
+            .$fname. "_jt=" .$runtime->{'funcs'}{"$fname"}{'job_total'}. ", "
+            .$fname. "_jr=" .$runtime->{'funcs'}{"$fname"}{'job_running'};
+            
 
-			($runtime->{'status'}, $runtime->{'message'}) =
-			  (WARNING,
-			   "less than " .$ng->get('warnworkers').
-			   " workers were found having function '$fname' registered.");
-		}
+        if ($runtime->{'funcs'}{"$fname"}{'worker_count'} <
+            $ng->get('critworkers') && $runtime->{'status'} <= CRITICAL) {
 
-		if ($runtime->{'funcs'}{"$fname"}{'job_total'} > $fthreshold
-		    && $fthreshold != -1 && $runtime->{'status'}<=WARNING) {
+            ($runtime->{'status'}, $runtime->{'message'}) =
+              (CRITICAL,
+               "less than " .$ng->get('critworkers').
+               " workers were found having function '$fname' registered. | "
+               .$fname. "_wc=" .$runtime->{'funcs'}{"$fname"}{'worker_count'}. ", "
+               .$fname. "_jt=" .$runtime->{'funcs'}{"$fname"}{'job_total'}. ", "
+               .$fname. "_jr=" .$runtime->{'funcs'}{"$fname"}{'job_running'}
+               );
+        }
 
-			($runtime->{'status'}, $runtime->{'message'}) =
-			  (WARNING,
-			   $runtime->{'funcs'}{"$fname"}{'job_total'}. 
-			   " jobs for $fname exceeds threshold $fthreshold");
-		}
-	}
+        if ($runtime->{'funcs'}{"$fname"}{'worker_count'} <
+            $ng->get('warnworkers') && $runtime->{'status'} <= WARNING) {
+
+            ($runtime->{'status'}, $runtime->{'message'}) =
+              (WARNING,
+               "less than " .$ng->get('warnworkers').
+               " workers were found having function '$fname' registered. | "
+               .$fname. "_wc=" .$runtime->{'funcs'}{"$fname"}{'worker_count'}. ", "
+               .$fname. "_jt=" .$runtime->{'funcs'}{"$fname"}{'job_total'}. ", "
+               .$fname. "_jr=" .$runtime->{'funcs'}{"$fname"}{'job_running'}
+                );
+        }
+
+        if ($runtime->{'funcs'}{"$fname"}{'job_total'} > $fthreshold
+            && $fthreshold != -1 && $runtime->{'status'}<=WARNING) {
+
+            ($runtime->{'status'}, $runtime->{'message'}) =
+              (WARNING,
+               $runtime->{'funcs'}{"$fname"}{'job_total'}. 
+               " jobs for $fname exceeds threshold $fthreshold | "
+               .$fname. "_wc=" .$runtime->{'funcs'}{"$fname"}{'worker_count'}. ", "
+               .$fname. "_jt=" .$runtime->{'funcs'}{"$fname"}{'job_total'}. ", "
+               .$fname. "_jr=" .$runtime->{'funcs'}{"$fname"}{'job_running'}
+            );
+        }
+    }
 }
 
 $np->nagios_exit($runtime->{'status'}, $runtime->{'message'});
