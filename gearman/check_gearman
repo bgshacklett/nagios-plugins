@@ -77,6 +77,7 @@ my $port = $ng->get('port');
 my $verbose = $ng->get('verbose');
 
 # look for gearadmin, use nc if not found
+# TODO: output a sane error if both gearadmin and netcat are unavailable.
 my @paths = grep { -x "$_/gearadmin" } split /:/, $ENV{PATH};
 my $cmd = "gearadmin --status -h $host -p $port";
 if (@paths == 0) {
@@ -134,9 +135,9 @@ foreach (@flist) {
     } else {
 
         $runtime->{'message'} = "Everything OK | "
-            .$fname. "_wc=" .$runtime->{'funcs'}{"$fname"}{'worker_count'}. ", "
-            .$fname. "_jt=" .$runtime->{'funcs'}{"$fname"}{'job_total'}. ", "
-            .$fname. "_jr=" .$runtime->{'funcs'}{"$fname"}{'job_running'};
+            .$fname. "_workers=" .$runtime->{'funcs'}{"$fname"}{'worker_count'}. ", "
+            .$fname. "_queue=" .$runtime->{'funcs'}{"$fname"}{'job_total'}. ", "
+            .$fname. "_running=" .$runtime->{'funcs'}{"$fname"}{'job_running'};
             
 
         if ($runtime->{'funcs'}{"$fname"}{'worker_count'} <
@@ -146,9 +147,9 @@ foreach (@flist) {
               (CRITICAL,
                "less than " .$ng->get('critworkers').
                " workers were found having function '$fname' registered. | "
-               .$fname. "_wc=" .$runtime->{'funcs'}{"$fname"}{'worker_count'}. ", "
-               .$fname. "_jt=" .$runtime->{'funcs'}{"$fname"}{'job_total'}. ", "
-               .$fname. "_jr=" .$runtime->{'funcs'}{"$fname"}{'job_running'}
+               .$fname. "_workers=" .$runtime->{'funcs'}{"$fname"}{'worker_count'}. ", "
+               .$fname. "_queue=" .$runtime->{'funcs'}{"$fname"}{'job_total'}. ", "
+               .$fname. "_running=" .$runtime->{'funcs'}{"$fname"}{'job_running'}
                );
         }
 
@@ -159,9 +160,9 @@ foreach (@flist) {
               (WARNING,
                "less than " .$ng->get('warnworkers').
                " workers were found having function '$fname' registered. | "
-               .$fname. "_wc=" .$runtime->{'funcs'}{"$fname"}{'worker_count'}. ", "
-               .$fname. "_jt=" .$runtime->{'funcs'}{"$fname"}{'job_total'}. ", "
-               .$fname. "_jr=" .$runtime->{'funcs'}{"$fname"}{'job_running'}
+               .$fname. "_workers=" .$runtime->{'funcs'}{"$fname"}{'worker_count'}. ", "
+               .$fname. "_queue=" .$runtime->{'funcs'}{"$fname"}{'job_total'}. ", "
+               .$fname. "_running=" .$runtime->{'funcs'}{"$fname"}{'job_running'}
                 );
         }
 
@@ -172,9 +173,9 @@ foreach (@flist) {
               (WARNING,
                $runtime->{'funcs'}{"$fname"}{'job_total'}. 
                " jobs for $fname exceeds threshold $fthreshold | "
-               .$fname. "_wc=" .$runtime->{'funcs'}{"$fname"}{'worker_count'}. ", "
-               .$fname. "_jt=" .$runtime->{'funcs'}{"$fname"}{'job_total'}. ", "
-               .$fname. "_jr=" .$runtime->{'funcs'}{"$fname"}{'job_running'}
+               .$fname. "_workers=" .$runtime->{'funcs'}{"$fname"}{'worker_count'}. ", "
+               .$fname. "_queue=" .$runtime->{'funcs'}{"$fname"}{'job_total'}. ", "
+               .$fname. "_running=" .$runtime->{'funcs'}{"$fname"}{'job_running'}
             );
         }
     }
