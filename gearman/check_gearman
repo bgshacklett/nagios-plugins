@@ -82,7 +82,7 @@ my @paths = grep { -x "$_/gearadmin" } split /:/, $ENV{PATH};
 my $cmd = "gearadmin --status -h $host -p $port";
 if (@paths == 0) {
     print STDERR "gearadmin not found, using nc\n" if ($verbose != 0);
-    $cmd = "echo status | nc -w 1 $host $port";
+    $cmd = "echo status | nc -w 1 -i 1 $host $port";
 }
 
 foreach (`$cmd | grep -v '^\\.'`) {
